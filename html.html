@@ -9,18 +9,24 @@
       width: 320px;
       height: 240px;
     }
-    #captureBtn {
+    #controls {
       margin-top: 10px;
+    }
+    button {
+      display: block;
+      margin: 5px 0;
     }
   </style>
 </head>
 <body>
 
   <h2>Webcam Image Capture</h2>
-  <video id="video" autoplay></video>
-  <br>
-  <button id="captureBtn">Capture Image</button>
-  <br>
+  <video id="video" autoplay playsinline></video>
+  <div id="controls">
+    <button id="captureBtn">Capture Image</button>
+    <button id="submitBtn">Submit</button>
+    <button id="switchBtn">Switch Camera</button>
+  </div>
   <canvas id="canvas"></canvas>
 
   <script>
@@ -28,20 +34,59 @@
     const canvas = document.getElementById('canvas');
     const context = canvas.getContext('2d');
     const captureBtn = document.getElementById('captureBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const switchBtn = document.getElementById('switchBtn');
 
-    // Ask for camera access
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then((stream) => {
-        video.srcObject = stream;
-      })
-      .catch((err) => {
-        console.error("Error accessing the camera: ", err);
-      });
+    let currentStream = null;
+    let usingFrontCamera = true;
 
-    // Capture image on button click
+    async function startCamera() {
+      // Stop any existing stream
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        video: {
+          facingMode: usingFrontCamera ? "user" : "environment"
+        }
+      };
+
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = currentStream;
+      } catch (err) {
+        console.error("Error accessing camera:", err);
+      }
+    }
+
     captureBtn.addEventListener('click', () => {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
     });
+
+    submitBtn.addEventListener('click', () => {
+      const imageData = canvas.toDataURL('image/png');
+      console.log("Image submitted:", imageData);
+      // Example fetch to server (commented out)
+      /*
+      fetch('/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageData })
+      })
+      .then(res => res.json())
+      .then(data => console.log('Success:', data))
+      .catch(err => console.error('Error:', err));
+      */
+    });
+
+    switchBtn.addEventListener('click', () => {
+      usingFrontCamera = !usingFrontCamera;
+      startCamera();
+    });
+
+    // Start camera on page load
+    startCamera();
   </script>
 
 </body>
